@@ -7,15 +7,8 @@
    ========================================================= */
 
 const SOURCE = {
-  // 'gas'  … GASのWebアプリから読む（本番）
-  // 'json' … 同梱の data/shops.json（架空のサンプルデータ）を読む。画面の確認用
-  mode: 'gas',
-
   // GASを「ウェブアプリ」としてデプロイしたときのURL（…/exec で終わるもの）
-  gasUrl: 'https://script.google.com/macros/s/AKfycbwoQROqwEtzhwbhBHzz8V-4zM5dCQw41lv0h7oWL7cyQq_bbwXa6YguFeLW9jAxusM45A/exec',
-
-  // mode: 'json' のときに読むファイル
-  jsonPath: 'data/shops.json'
+  gasUrl: 'https://script.google.com/macros/s/AKfycbwoQROqwEtzhwbhBHzz8V-4zM5dCQw41lv0h7oWL7cyQq_bbwXa6YguFeLW9jAxusM45A/exec'
 };
 
 /* ---------------------------------------------------------
@@ -23,9 +16,7 @@ const SOURCE = {
    --------------------------------------------------------- */
 
 async function loadShops() {
-  const rows = SOURCE.mode === 'json'
-    ? await fetchFromJson()
-    : await fetchFromGas();
+  const rows = await fetchFromGas();
 
   return rows
     .map(normalizeShop)
@@ -52,20 +43,8 @@ async function fetchFromGas() {
 }
 
 /* ---------------------------------------------------------
-   取得：JSONファイル（画面確認用のサンプル）
-   --------------------------------------------------------- */
-
-async function fetchFromJson() {
-  const res = await fetch(SOURCE.jsonPath, { cache: 'no-cache' });
-  if (!res.ok) {
-    throw new Error(`店舗データを読み込めませんでした（${res.status}）`);
-  }
-  return res.json();
-}
-
-/* ---------------------------------------------------------
    正規化
-   GASでもサンプルJSONでも同じ形にそろえる。
+   画面で扱う形にそろえる（GASが返さない項目は空文字になり、画面には出ない）。
    緯度経度が無い行は地図に置けないため除外する。
    --------------------------------------------------------- */
 

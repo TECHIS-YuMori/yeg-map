@@ -46,8 +46,7 @@ Node.js を使う場合は次でも構いません。
 npx serve -l 5500 .
 ```
 
-> GASのURLを設定する前に画面だけ確認したいときは、`js/data-source.js` の `mode` を `'json'` にすると、
-> 架空のサンプルデータ（`data/shops.json`）で表示できます。**公開前に必ず `'gas'` に戻してください。**
+> ローカルで開いた場合も、店舗データは本番と同じGASから読み込みます。
 
 ### サーバーの止め方
 
@@ -112,9 +111,7 @@ Stop-Process -Id 1234
 
 ```js
 const SOURCE = {
-  mode: 'gas',
-  gasUrl: 'https://script.google.com/macros/s/xxxxxxxx/exec',   // ← ここに貼る
-  jsonPath: 'data/shops.json'
+  gasUrl: 'https://script.google.com/macros/s/xxxxxxxx/exec'   // ← ここに貼る
 };
 ```
 
@@ -170,17 +167,25 @@ const SOURCE = {
 - **氏名は代表者としてサイトに公開されます。** フォームの案内文などで、会員さんに伝えておいてください
 - スプレッドシートの共有設定は「**制限付き**」のままにしてください（一般公開は不要です）
 - GASを修正したときは、「デプロイ」→「**デプロイを管理**」→ 既存のデプロイを編集 →「新バージョン」で更新してください。「新しいデプロイ」を作るとURLが変わり、古いURLも動き続けます
-- `data/shops.json` は架空のサンプルです。**実データをこのフォルダ（GitHub）に置かないでください**。公開リポジトリは誰でも中身を見られます
+- GASのURL（`js/data-source.js`）は公開されていても問題ありません。URLから動くのは公開データを返す `doGet` だけです
+- **店舗の実データをこのフォルダ（GitHub）に置かないでください**。公開リポジトリは誰でも中身を見られます
 
 ---
 
-## 5. インターネットに公開する（GitHub Pages）
+## 5. インターネットへの公開（GitHub Pages）
 
-1. GitHubにリポジトリを作り、このフォルダ一式を push
-2. リポジトリの Settings → Pages で、公開するブランチ（`main`）を指定
-3. 数分後に `https://ユーザー名.github.io/リポジトリ名/` で公開されます
+- 公開URL：<https://moriyu1988.github.io/yeg-map/>
+- リポジトリ：<https://github.com/MoriYu1988/yeg-map>（`main` ブランチを GitHub Pages で公開）
 
-`js/data-source.js` の `mode` が `'gas'` になっていることを確認してから公開してください。
+**お店の情報**の更新は、スプレッドシートで「③ MAPに反映」を押すだけです。GitHubの操作は要りません。
+
+**サイトのコード**（HTML・CSS・JS）を直したときは、GitHubにプッシュすると1分ほどで公開サイトに反映されます。
+
+```bash
+git add -A
+git commit -m "変更内容のメモ"
+git push
+```
 
 ---
 
@@ -194,8 +199,7 @@ const SOURCE = {
 │   └── app.js            地図と一覧の連動処理
 ├── gas/
 │   └── Code.gs           GASのコード（スプレッドシートに貼り付けて使う。サイトには不要）
-├── data/
-│   └── shops.json        架空のサンプルデータ（画面確認用）
+├── .nojekyll             GitHub Pagesの変換処理を止めるための空ファイル
 └── .claude/launch.json   ローカル確認用サーバーの設定
 ```
 
