@@ -1,0 +1,508 @@
+/* =========================================================
+   松山YEG 夜の飲食店MAP
+   ========================================================= */
+
+:root {
+  --bg:           #0e1014;
+  --bg-panel:     #161a21;
+  --bg-card:      #1c212a;
+  --bg-card-hover:#232936;
+  --line:         #2b323e;
+  --text:         #e9e7e4;
+  --text-muted:   #98a0ad;
+  --accent:       #f5a524;   /* 提灯の灯り */
+  --accent-dark:  #c9821a;
+  --accent-soft:  rgba(245,165,36,.14);
+  --pin:          #e8622c;
+  --pin-active:   #f5a524;
+  --radius:       12px;
+  --map-h-mobile: 44vh;
+  --font: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.7;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ---------- ヘッダー ---------- */
+
+.site-header {
+  background: linear-gradient(160deg, #1a1005 0%, #16181f 60%);
+  border-bottom: 1px solid var(--line);
+}
+
+.header-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 18px 20px 16px;
+}
+
+.brand {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.brand-mark {
+  display: inline-block;
+  background: var(--accent);
+  color: #1a1206;
+  font-weight: 700;
+  font-size: .78rem;
+  letter-spacing: .06em;
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.brand-lead {
+  margin: 6px 0 0;
+  font-size: .84rem;
+  color: var(--text-muted);
+}
+
+/* ---------- レイアウト ---------- */
+
+.layout {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  /* minmax(0,...) が無いと、横スクロールするチップ列が
+     グリッドの列幅ごと押し広げてしまう */
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---------- 地図 ---------- */
+
+.map-pane {
+  position: sticky;
+  top: 0;
+  z-index: 500;
+  min-width: 0;
+  height: var(--map-h-mobile);
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--line);
+}
+
+#map {
+  width: 100%;
+  height: 100%;
+  background: #22262e;
+}
+
+.map-reset {
+  position: absolute;
+  right: 10px;
+  bottom: 12px;
+  z-index: 600;
+  background: rgba(22,26,33,.94);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: .78rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.map-reset:hover { background: var(--bg-card-hover); }
+
+/* 地図タイルを夜向けに少し落ち着かせる */
+.leaflet-tile-pane { filter: brightness(.78) saturate(.75) contrast(1.05); }
+
+.leaflet-container {
+  background: #22262e;
+  font-family: var(--font);
+}
+
+/* カスタムピン */
+.shop-pin { background: transparent; border: none; }
+
+.shop-pin span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--pin);
+  color: #fff;
+  font-size: .78rem;
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,.85);
+  box-shadow: 0 2px 6px rgba(0,0,0,.5);
+  transition: background .15s, transform .15s;
+}
+
+.shop-pin span i {
+  transform: rotate(45deg);
+  font-style: normal;
+}
+
+.shop-pin.is-active span {
+  background: var(--pin-active);
+  color: #1a1206;
+  transform: rotate(-45deg) scale(1.25);
+}
+
+/* ポップアップ */
+.leaflet-popup-content-wrapper {
+  background: var(--bg-card);
+  color: var(--text);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+}
+
+.leaflet-popup-tip { background: var(--bg-card); }
+.leaflet-popup-content { margin: 12px 14px; min-width: 210px; }
+.leaflet-container a.leaflet-popup-close-button { color: var(--text-muted); }
+
+.popup-cat {
+  font-size: .72rem;
+  color: var(--accent);
+  letter-spacing: .04em;
+}
+
+.popup-name {
+  margin: 2px 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.popup-meta {
+  margin: 0 0 10px;
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+.popup-actions { display: flex; gap: 8px; }
+
+.popup-actions a,
+.popup-actions button {
+  flex: 1;
+  display: block;
+  text-align: center;
+  font-family: inherit;
+  font-size: .78rem;
+  font-weight: 600;
+  padding: 8px 6px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.popup-actions .is-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1206;
+}
+
+/* ---------- 絞り込み ---------- */
+
+.list-pane {
+  min-width: 0;
+  padding: 0 14px 40px;
+}
+
+.filters {
+  background: var(--bg);
+  padding: 12px 0 8px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 11px 14px;
+  font-size: 16px; /* iOSでの自動ズームを防ぐ */
+  font-family: inherit;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.search-input::placeholder { color: #6d7684; }
+.search-input:focus { outline: 2px solid var(--accent-dark); outline-offset: 1px; }
+
+.chip-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 9px 0 2px;
+  min-width: 0;
+  scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar { display: none; }
+
+.chip {
+  flex: 0 0 auto;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 13px;
+  font-size: .78rem;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover { background: var(--bg-card-hover); color: var(--text); }
+
+.chip.is-on {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.result-count {
+  margin: 8px 2px 0;
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+/* ---------- 店舗一覧 ---------- */
+
+.shop-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.shop-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 14px 12px;
+  scroll-margin-top: calc(var(--map-h-mobile) + 12px);
+  transition: border-color .2s, background .2s;
+}
+
+.shop-card:hover { background: var(--bg-card-hover); }
+
+.shop-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 6px 20px rgba(0,0,0,.4);
+}
+
+/* 店舗ロゴ・写真。縦横比がまちまちなので、切り抜かずに枠内へ収める */
+.card-img {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: contain;
+  background: #11141a;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.card-no {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--pin);
+  color: #fff;
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.shop-card.is-active .card-no { background: var(--accent); color: #1a1206; }
+
+.card-title { min-width: 0; }
+
+.card-cat {
+  font-size: .72rem;
+  color: var(--accent);
+  letter-spacing: .04em;
+}
+
+.card-name {
+  margin: 1px 0 0;
+  font-size: 1.04rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.card-area {
+  margin: 2px 0 0;
+  font-size: .76rem;
+  color: var(--text-muted);
+}
+
+.card-desc {
+  margin: 10px 0 0;
+  font-size: .84rem;
+  color: #c6cad2;
+}
+
+.card-info {
+  margin: 10px 0 0;
+  padding: 10px 0 0;
+  border-top: 1px dashed var(--line);
+  display: grid;
+  gap: 3px;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+.card-info a { color: var(--accent); }
+.card-info div { display: flex; gap: 8px; }
+.card-info dt { flex: 0 0 4.2em; color: #79818e; }
+.card-info dd { margin: 0; flex: 1; }
+
+.card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 10px 0 0;
+}
+
+.tag {
+  font-size: .7rem;
+  color: var(--text-muted);
+  background: #202632;
+  border-radius: 4px;
+  padding: 2px 7px;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: .8rem;
+  font-weight: 600;
+  padding: 9px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn:hover { background: var(--bg-card-hover); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #1a1206;
+}
+
+.btn-primary:hover { background: var(--accent-dark); border-color: var(--accent-dark); }
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: .86rem;
+  padding: 40px 10px;
+}
+
+.load-error {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid #6b3a3a;
+  background: #2a1a1a;
+  border-radius: var(--radius);
+  font-size: .84rem;
+}
+
+.load-error code {
+  display: inline-block;
+  background: #14181f;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+/* ---------- フッター ---------- */
+
+.site-footer {
+  border-top: 1px solid var(--line);
+  padding: 22px 20px 30px;
+  text-align: center;
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+.site-footer p { margin: 0 0 4px; }
+.footer-note { font-size: .72rem; }
+
+/* ---------- PC表示 ---------- */
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(380px, 1fr) minmax(0, 1.25fr);
+    align-items: start;
+  }
+
+  .map-pane {
+    order: 2;
+    height: 100vh;
+    border-bottom: none;
+    border-left: 1px solid var(--line);
+  }
+
+  .list-pane {
+    order: 1;
+    padding: 0 18px 60px;
+  }
+
+  .filters {
+    position: sticky;
+    top: 0;
+    z-index: 400;
+  }
+
+  .shop-card { scroll-margin-top: 150px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; scroll-behavior: auto !important; }
+}
