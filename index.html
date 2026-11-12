@@ -45,7 +45,8 @@
     <div class="sheet-body" id="sheetBody">
 
       <div class="filters">
-        <div class="search-row">
+        <!-- スマホでは、この検索欄を地図の上部に移して重ねて表示する（js/app.js の placeSearch） -->
+        <div class="search-row" id="searchRow">
           <input type="search" id="keyword" class="search-input"
                  placeholder="店名・エリア・キーワードで検索" aria-label="キーワード検索">
         </div>
@@ -57,12 +58,20 @@
 
         <div class="filter-row">
           <span class="filter-label">ジャンル</span>
-          <div class="chip-wrap" id="categoryChips" data-filter-group role="group" aria-label="ジャンルで絞り込み"></div>
+          <div class="genre-control">
+            <!-- PC・タブレット：色付きのボタン／スマホ：プルダウン（どちらか一方だけを表示） -->
+            <div class="chip-wrap genre-chips" id="categoryChips" data-filter-group role="group" aria-label="ジャンルで絞り込み"></div>
+            <select class="genre-select" id="categorySelect" aria-label="ジャンルで絞り込み"></select>
+          </div>
         </div>
 
         <div class="filter-row" id="areaRow" hidden>
           <span class="filter-label">エリア</span>
-          <div class="segmented" id="areaChips" data-filter-group role="group" aria-label="エリアで絞り込み"></div>
+          <div class="area-control">
+            <!-- PC・タブレット：スイッチ／スマホ：プルダウン（どちらか一方だけを表示） -->
+            <div class="segmented" id="areaChips" data-filter-group role="group" aria-label="エリアで絞り込み"></div>
+            <select class="area-select" id="areaSelect" aria-label="エリアで絞り込み"></select>
+          </div>
         </div>
       </div>
 
@@ -94,6 +103,7 @@
         integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="js/landmarks.js"></script>
+<script src="js/genre-colors.js"></script>
 <script src="js/data-source.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -14,6 +14,9 @@ const LANDMARK_LABEL_MIN_ZOOM = 15;
 // スマホ表示（一覧が下から引き出すシートになる）かどうか
 const MOBILE_QUERY = window.matchMedia('(max-width: 899px)');
 const isMobile = () => MOBILE_QUERY.matches;
+
+// スマホ幅（シートが狭いので、検索欄を地図の上に出し、絞り込みはプルダウンだけにする）
+const PHONE_QUERY = window.matchMedia('(max-width: 599px)');
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 const state = {
@@ -24,7 +27,7 @@ const state = {
   filter: { keyword: '', category: '', area: '' }
 };
 
-// スマホのシートの状態（peek: 少しだけ / half: 半分 / full: 全開）
+// スマホのシートの状態（mini: 最小 / peek: 少しだけ / half: 半分 / full: 全開）
 const sheet = { state: 'half', height: 0 };
 
 let map;
@@ -40,7 +43,15 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   initMap();
+  placeSearch();
+  placeResetButton();
   initSheet();
+
+  // 表示の切り替わりは、画面幅の判定の変化とウィンドウサイズの変化の両方で拾う
+  // （ブラウザによっては片方しか届かないことがあるため）
+  MOBILE_QUERY.addEventListener('change', syncLayoutMode);
+  PHONE_QUERY.addEventListener('change', syncLayoutMode);
+  window.addEventListener('resize', debounce(syncLayoutMode, 150));
   initLightbox();
   renderLandmarks();   // 目印は店舗データの読み込みを待たずに表示する
 
@@ -52,6 +63,8 @@ async function init() {
   }
 
   buildFilterChips();
+  // 絞り込み欄ができあがったので、シートの高さを測り直す（地図を合わせる前に）
+  if (isMobile()) setSheet(sheet.state, { animate: false });
   applyFilter();
   bindEvents();
   openFromHash();
@@ -100,7 +113,7 @@ function renderMarkers() {
 
   state.visible.forEach((shop, i) => {
     const marker = L.marker([shop.lat, shop.lng], {
-      icon: createPinIcon(i + 1, shop.id === state.activeId),
+      icon: createPinIcon(i + 1, shop.id === state.activeId, genreColor(shop.category)),
       title: shop.name,
       alt: shop.name
     });
@@ -116,10 +129,11 @@ function renderMarkers() {
   fitToMarkers();
 }
 
-function createPinIcon(no, isActive) {
+/* ピンはジャンルの色（絞り込みボタン・一覧の丸付き番号と同じ色） */
+function createPinIcon(no, isActive, color) {
   return L.divIcon({
     className: `shop-pin${isActive ? ' is-active' : ''}`,
-    html: `<span><i>${no}</i></span>`,
+    html: `<span style="--c: ${color}"><i>${no}</i></span>`,
     iconSize: [30, 30],
     iconAnchor: [15, 30],
     popupAnchor: [0, -28]
@@ -173,10 +187,20 @@ function panToVisible(latlng, zoom, { anchor = 0.5, animate = true } = {}) {
 }
 
 /* ポップアップが開いたとき、シートの下に隠れないように自動で地図をずらす範囲 */
+/* ポップアップが開いたとき、地図に重なっている部品（スマホの検索欄・シート、PCの「全体表示に戻す」）
+   に隠れないように、自動で地図をずらす範囲。
+   ※ポップアップは地図の内側に描かれるため、外から重ねた部品より手前には出せない。避けるしかない。 */
 function updatePopupPadding() {
+  let top = 20;
+  const search = document.getElementById('searchRow');
+  if (PHONE_QUERY.matches && search.parentElement.classList.contains('map-pane')) {
+    top = search.getBoundingClientRect().bottom - map.getContainer().getBoundingClientRect().top + 10;
+  }
+  const bottom = 20 + (isMobile() ? coveredHeight() : 50);   // PCは右下の「全体表示に戻す」のぶん
+
   const options = {
-    autoPanPaddingTopLeft: L.point(20, 20),
-    autoPanPaddingBottomRight: L.point(20, 20 + coveredHeight())
+    autoPanPaddingTopLeft: L.point(20, Math.max(top, 20)),
+    autoPanPaddingBottomRight: L.point(20, bottom)
   };
   [...state.markers.values(), ...landmarkMarkers].forEach(marker => {
     const popup = marker && marker.getPopup();
@@ -285,7 +309,7 @@ function cardHtml(shop, no) {
       <span class="zoom-hint" aria-hidden="true">拡大表示</span>
     </div>` : ''}
     <div class="card-head">
-      <div class="card-no">${no}</div>
+      <div class="card-no" style="--c: ${genreColor(shop.category)}">${no}</div>
       <div class="card-title">
         <p class="card-cat">${esc(shop.category)}</p>
         <h2 class="card-name">${esc(shop.name)}</h2>
@@ -316,7 +340,7 @@ function popupHtml(shop, no) {
   return `
     ${shop.image ? `<img class="popup-img js-zoom" src="${esc(shop.image)}" alt="${esc(shop.name)}"
          referrerpolicy="no-referrer" onerror="this.remove()">` : ''}
-    <p class="popup-cat">${no}. ${esc(shop.category)}</p>
+    <p class="popup-cat" style="--c: ${genreColor(shop.category)}">${no}. ${esc(shop.category)}</p>
     <p class="popup-name">${esc(shop.name)}</p>
     ${meta ? `<p class="popup-meta">${esc(meta)}</p>` : ''}
     <div class="popup-actions">
@@ -341,11 +365,22 @@ function mapAppUrl(place) {
    --------------------------------------------------------- */
 
 function buildFilterChips() {
-  renderOptions('categoryChips', 'category', uniqueValues('category'), 'chip');
+  // ジャンル：PC・タブレットは色付きのボタン、スマホはプルダウン（CSSでどちらかを表示）
+  const categories = uniqueValues('category');
+  renderOptions('categoryChips', 'category', categories, 'chip chip-genre',
+    v => ` style="--c: ${genreColor(v)}"`);
+  document.getElementById('categorySelect').innerHTML = [
+    '<option value="">すべてのジャンル</option>',
+    ...categories.map(v => `<option value="${esc(v)}">${esc(v)}</option>`)
+  ].join('');
 
-  // エリアはスイッチ型。値が1つも無ければ行ごと隠す
+  // エリア：PC・タブレットはスイッチ、スマホはプルダウン。値が1つも無ければ行ごと隠す
   const areas = uniqueValues('area');
   renderOptions('areaChips', 'area', areas, 'seg-btn');
+  document.getElementById('areaSelect').innerHTML = [
+    '<option value="">すべてのエリア</option>',
+    ...areas.map(v => `<option value="${esc(v)}">${esc(v)}</option>`)
+  ].join('');
   document.getElementById('areaRow').hidden = areas.length === 0;
 }
 
@@ -353,12 +388,39 @@ function uniqueValues(key) {
   return [...new Set(state.shops.map(s => s[key]).filter(Boolean))];
 }
 
-function renderOptions(containerId, key, values, className) {
+function renderOptions(containerId, key, values, className, extraAttr = () => '') {
   document.getElementById(containerId).innerHTML = [
     `<button type="button" class="${className} is-on" aria-pressed="true" data-key="${key}" data-value="">すべて</button>`,
     ...values.map(v =>
-      `<button type="button" class="${className}" aria-pressed="false" data-key="${key}" data-value="${esc(v)}">${esc(v)}</button>`)
+      `<button type="button" class="${className}" aria-pressed="false" data-key="${key}" data-value="${esc(v)}"${extraAttr(v)}>${esc(v)}</button>`)
   ].join('');
+}
+
+/* ジャンルの色。js/genre-colors.js に書いてあればその色、無ければ名前から自動で決める */
+const GENRE_PALETTE = ['#b45309', '#047857', '#1d4ed8', '#9d174d', '#6d28d9', '#0e7490', '#4d7c0f', '#a21caf'];
+
+function genreColor(name) {
+  const fixed = typeof GENRE_COLORS !== 'undefined' && GENRE_COLORS[name];
+  if (/^#[0-9a-f]{3,8}$/i.test(fixed || '')) return fixed;
+
+  let hash = 0;
+  for (const ch of String(name)) hash = (hash * 31 + ch.codePointAt(0)) >>> 0;
+  return GENRE_PALETTE[hash % GENRE_PALETTE.length];
+}
+
+/* 絞り込みの条件を変えて、ボタン・スイッチ・プルダウンの表示をそろえる */
+function setFilter(key, value) {
+  state.filter[key] = value;
+
+  document.querySelectorAll(`[data-filter-group] [data-key="${key}"]`).forEach(b => {
+    const on = b.dataset.value === value;
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  const select = document.getElementById(key === 'category' ? 'categorySelect' : 'areaSelect');
+  if (select) select.value = value;
+
+  applyFilter();
 }
 
 function applyFilter() {
@@ -407,11 +469,9 @@ function selectShop(id, { from }) {
     const marker = state.markers.get(id);
     if (marker) setTimeout(() => marker.openPopup(), 650);
   } else {
-    // 地図から選択 → 一覧の該当カードまでスクロール（スマホはシートを半分まで出す）
-    if (sheet.state !== 'half') {
-      setSheet('half');
-      panToVisible([shop.lat, shop.lng], map.getZoom(), { anchor: 0.8 });
-    }
+    // 地図から選択 → スマホはシートを「最小」まで下げて、地図とポップアップを広く見せる。
+    // 一覧は裏で該当カードまでスクロールしておき、「詳しく見る」でシートを全開にする。
+    if (isMobile()) setSheet('mini');
     scrollToCard(id);
   }
 }
@@ -443,7 +503,7 @@ function updateActiveStyles() {
     if (!marker) return;
 
     const isActive = shop.id === state.activeId;
-    marker.setIcon(createPinIcon(i + 1, isActive));
+    marker.setIcon(createPinIcon(i + 1, isActive, genreColor(shop.category)));
     marker.setZIndexOffset(isActive ? 1000 : 0);   // 選択中のピンを手前に
   });
 }
@@ -455,12 +515,24 @@ function updateActiveStyles() {
      一番上で下に引くとシートが下がる
    --------------------------------------------------------- */
 
+/* シートの4つの段階の高さ。「最小」と「少しだけ」は、実際の部品の位置から計算する
+   - mini：つまみ・件数・「全体表示に戻す」が見えるギリギリ（ピンをタップしたとき）
+   - peek：絞り込み（プルダウン）が見えるギリギリ（「全体表示に戻す」を押したとき）
+   - half：画面の半分（最初に開いたとき）
+   - full：全開。上に地図を少し残す（スマホでは検索欄が見える高さ） */
 function sheetSnaps() {
   const H = document.querySelector('.layout').clientHeight;
+  const head = document.getElementById('sheetHead').offsetHeight;
+  const filters = document.querySelector('.filters');
+  const filtersBottom = filters.offsetTop + filters.offsetHeight;   // シートの一覧部分の上端から
+
+  const mini = head;
+  const peek = Math.max(mini + 40, Math.min(head + filtersBottom, H * 0.45));
   return {
-    peek: Math.round(Math.min(150, H * 0.3)),
-    half: Math.round(H * 0.5),
-    full: Math.round(Math.max(H - 56, H * 0.6))
+    mini: Math.round(mini),
+    peek: Math.round(peek),
+    half: Math.round(Math.max(H * 0.5, peek + 40)),
+    full: Math.round(Math.max(H - 66, H * 0.6))
   };
 }
 
@@ -479,10 +551,10 @@ function setSheetHeight(px, animate) {
   if (map) updatePopupPadding();
 }
 
-/* 指を離したときに、どの段階（少しだけ／半分／全開）に吸着させるかを決める。
+/* 指を離したときに、どの段階（最小／少しだけ／半分／全開）に吸着させるかを決める。
    - ゆっくり離したとき：一番近い段階
    - さっと払ったとき：払った向きに1段階だけ進む（大きく引っぱって次の段階を越えていれば、近い方） */
-const SHEET_ORDER = ['peek', 'half', 'full'];
+const SHEET_ORDER = ['mini', 'peek', 'half', 'full'];
 
 function snapSheet(height, velocity, fromState) {
   const snaps = sheetSnaps();
@@ -495,7 +567,7 @@ function snapSheet(height, velocity, fromState) {
   }
 
   const step = velocity < 0 ? 1 : -1;   // 上向き（velocity < 0）なら高くなる方へ
-  let target = Math.min(2, Math.max(0, SHEET_ORDER.indexOf(fromState) + step));
+  let target = Math.min(SHEET_ORDER.length - 1, Math.max(0, SHEET_ORDER.indexOf(fromState) + step));
   const nearestIndex = SHEET_ORDER.indexOf(nearest);
   if ((step > 0 && nearestIndex > target) || (step < 0 && nearestIndex < target)) target = nearestIndex;
   setSheet(SHEET_ORDER[target]);
@@ -508,7 +580,7 @@ function initSheet() {
 
   const clampHeight = h => {
     const snaps = sheetSnaps();
-    return Math.max(snaps.peek * 0.7, Math.min(snaps.full, h));
+    return Math.max(snaps.mini, Math.min(snaps.full, h));
   };
 
   // ドラッグ中の位置と速さを記録する
@@ -527,7 +599,7 @@ function initSheet() {
     const moved = Math.abs(drag.lastY - drag.startY);
     if (moved < 6) {
       // つまみをタップしたときは段階を1つ進める
-      setSheet({ peek: 'half', half: 'full', full: 'half' }[sheet.state]);
+      setSheet({ mini: 'peek', peek: 'half', half: 'full', full: 'half' }[sheet.state]);
     } else {
       snapSheet(el.offsetHeight, drag.v, drag.fromState);
     }
@@ -536,7 +608,7 @@ function initSheet() {
 
   // 上部（つまみ・件数）：マウスでも指でもドラッグできる
   head.addEventListener('pointerdown', e => {
-    if (!isMobile()) return;
+    if (!isMobile() || e.target.closest('button')) return;   // ボタン（全体表示に戻す）はドラッグ扱いにしない
     head.setPointerCapture(e.pointerId);
     startDrag(e.clientY);
   });
@@ -580,21 +652,55 @@ function initSheet() {
     if (isMobile()) setSheet('full');
   });
 
-  // PC表示とスマホ表示が切り替わったとき
-  MOBILE_QUERY.addEventListener('change', () => {
-    if (isMobile()) {
-      setSheet(sheet.state, { animate: false });
-      map.scrollWheelZoom.disable();
-    } else {
-      el.style.height = '';
-      sheet.height = 0;
-      map.scrollWheelZoom.enable();
-    }
-    placeAttribution();
-    updatePopupPadding();
-  });
+  // 最初の高さ：スマホは「少しだけ」（ジャンル・エリアが見えるギリギリ）で地図を広く見せる。
+  // タブレットは「半分」
+  setSheet(PHONE_QUERY.matches ? 'peek' : 'half', { animate: false });
+}
 
-  setSheet('half', { animate: false });
+/* PC・タブレット・スマホの表示が切り替わったとき（ウィンドウ幅の変更、端末の回転）に、
+   検索欄の置き場所・シート・地図の操作方法をその表示に合わせる。何度呼んでも同じ結果になる。 */
+function syncLayoutMode() {
+  placeSearch();
+  placeResetButton();
+
+  if (isMobile()) {
+    setSheet(sheet.state, { animate: false });
+    map.scrollWheelZoom.disable();
+  } else {
+    document.getElementById('sheet').style.height = '';
+    sheet.height = 0;
+    map.scrollWheelZoom.enable();
+  }
+  placeAttribution();
+  updatePopupPadding();
+}
+
+/* ---------------------------------------------------------
+   検索欄の置き場所
+   スマホ：地図の上部に重ねて表示／PC・タブレット：一覧の絞り込み欄の先頭
+   （同じ入力欄を移動させるので、入力中の文字や動きはそのまま）
+   --------------------------------------------------------- */
+
+function placeSearch() {
+  const row = document.getElementById('searchRow');
+  if (PHONE_QUERY.matches) {
+    document.querySelector('.map-pane').appendChild(row);
+  } else {
+    const filters = document.querySelector('.filters');
+    filters.insertBefore(row, filters.firstChild);
+  }
+}
+
+/* 「全体表示に戻す」の置き場所
+   スマホ・タブレット：シート上部の件数の横（地図の上に重ねる部品を減らし、ポップアップと重ならないように）
+   PC：地図の右下 */
+function placeResetButton() {
+  const btn = document.getElementById('resetView');
+  if (isMobile()) {
+    document.getElementById('sheetHead').appendChild(btn);
+  } else {
+    document.querySelector('.map-pane').appendChild(btn);
+  }
 }
 
 /* ---------------------------------------------------------
@@ -655,20 +761,20 @@ function bindEvents() {
     applyFilter();
   }, 250));
 
-  // ジャンル（チップ）・エリア（スイッチ）
+  // ジャンル（ボタン）・エリア（スイッチ）
   document.querySelectorAll('[data-filter-group]').forEach(group => {
     group.addEventListener('click', e => {
       const btn = e.target.closest('[data-key]');
-      if (!btn) return;
-
-      state.filter[btn.dataset.key] = btn.dataset.value;
-      group.querySelectorAll('[data-key]').forEach(b => {
-        const on = b === btn;
-        b.classList.toggle('is-on', on);
-        b.setAttribute('aria-pressed', String(on));
-      });
-      applyFilter();
+      if (btn) setFilter(btn.dataset.key, btn.dataset.value);
     });
+  });
+
+  // ジャンル・エリア（スマホのプルダウン）
+  document.getElementById('categorySelect').addEventListener('change', e => {
+    setFilter('category', e.target.value);
+  });
+  document.getElementById('areaSelect').addEventListener('change', e => {
+    setFilter('area', e.target.value);
   });
 
   // 一覧のカード（「地図で見る」ボタン、またはカード本体のタップ）
@@ -684,18 +790,22 @@ function bindEvents() {
     const btn = e.target.closest('.js-scroll');
     if (!btn) return;
     map.closePopup();
-    if (sheet.state === 'peek') setSheet('half');
+    if (isMobile()) setSheet('full');   // スマホはシートを全開にして、お店の情報をすべて見せる
     scrollToCard(btn.dataset.id);
   });
 
   watchMapSize();
 
-  // 全体表示に戻す
+  // 全体表示に戻す：ポップアップを閉じ、スマホはシートも「少しだけ」（絞り込みが見える高さ）に戻す
   document.getElementById('resetView').addEventListener('click', () => {
     state.activeId = null;
     map.closePopup();
     updateActiveStyles();
-    fitToMarkers();
+    if (isMobile()) {
+      setSheet('peek');
+      document.getElementById('sheetBody').scrollTo({ top: 0 });
+    }
+    fitToMarkers();   // シートの高さを決めてから、隠れない範囲に地図を合わせる
   });
 }
 

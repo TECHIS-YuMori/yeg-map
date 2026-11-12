@@ -19,8 +19,7 @@
   --text-muted:   #4a5767;
 
   /* お店のピン（目印のブランドカラーと見分けやすい暖色） */
-  --pin:          #e2582c;
-  --pin-active:   #b93d12;
+  --pin:          #e2582c;   /* ジャンルの色が取れなかったときの予備 */
 
   --radius:       12px;
   --shadow:       0 1px 3px rgba(16, 38, 64, .10), 0 1px 2px rgba(16, 38, 64, .06);
@@ -162,13 +161,13 @@ button { font-family: inherit; }
   height: 30px;
   border-radius: 50% 50% 50% 4px;
   transform: rotate(-45deg);
-  background: var(--pin);
+  background: var(--c, var(--pin));
   color: #fff;
   font-size: .78rem;
   font-weight: 700;
   border: 2px solid #fff;
   box-shadow: 0 2px 5px rgba(0, 0, 0, .35);
-  transition: background .15s, transform .15s;
+  transition: transform .15s, box-shadow .15s;
 }
 
 .shop-pin span i {
@@ -176,9 +175,11 @@ button { font-family: inherit; }
   font-style: normal;
 }
 
+/* 選択中：色はジャンルのまま、大きくして縁取りで目立たせる */
 .shop-pin.is-active span {
-  background: var(--pin-active);
-  transform: rotate(-45deg) scale(1.25);
+  transform: rotate(-45deg) scale(1.3);
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(10, 62, 106, .35), 0 4px 10px rgba(0, 0, 0, .45);
 }
 
 /* 目印のピン（ブランドカラーの吹き出し。名前を常に表示する） */
@@ -249,7 +250,7 @@ button { font-family: inherit; }
   margin: 0 !important;
   font-size: .74rem;
   font-weight: 700;
-  color: var(--pin-active);
+  color: var(--c, var(--pin));
   letter-spacing: .04em;
 }
 
@@ -382,6 +383,47 @@ button { font-family: inherit; }
   font-weight: 700;
 }
 
+/* ジャンルのボタン：ジャンルごとの色（--c）で塗り分ける。「すべて」はブランドカラーのまま */
+
+.chip-genre[style] {
+  color: var(--c);
+  border-color: color-mix(in srgb, var(--c) 45%, #fff);
+  background: color-mix(in srgb, var(--c) 8%, #fff);
+  font-weight: 700;
+}
+
+.chip-genre[style]:hover { border-color: var(--c); }
+
+.chip-genre[style].is-on {
+  background: var(--c);
+  border-color: var(--c);
+  color: #fff;
+}
+
+/* ジャンル・エリアのプルダウン（スマホだけ表示） */
+.genre-control,
+.area-control { min-width: 0; }
+
+.genre-select,
+.area-select {
+  display: none;
+  width: 100%;
+  max-width: 260px;
+  padding: 7px 34px 7px 12px;
+  font-family: inherit;
+  font-size: 16px;   /* iOSでの自動ズームを防ぐ */
+  font-weight: 500;
+  color: var(--text);
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%230a3e6a' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 12px center;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.genre-select:focus,
+.area-select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+
 /* 目印へ移動するボタン */
 .chip-landmark {
   background: var(--brand-soft);
@@ -495,13 +537,13 @@ button { font-family: inherit; }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: var(--pin);
+  background: var(--c, var(--pin));
   color: #fff;
   font-size: .76rem;
   font-weight: 700;
 }
 
-.shop-card.is-active .card-no { background: var(--pin-active); }
+.shop-card.is-active .card-no { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--pin)) 25%, #fff); }
 
 .card-title { min-width: 0; }
 
@@ -731,12 +773,16 @@ button { font-family: inherit; }
     border: 0;
   }
 
-  /* 右上は地図の出典表示があるので、「全体表示に戻す」は左上のズームボタンの下に置く */
-  .map-reset {
-    top: 88px;
-    left: 10px;
-    right: auto;
+  /* 「全体表示に戻す」はシート上部の件数の横に置く（地図の上に重ねる部品を減らすため） */
+  .sheet-head { position: relative; }
+
+  .sheet-head .map-reset {
+    top: 13px;
+    right: 12px;
     bottom: auto;
+    padding: 3px 10px;
+    font-size: .72rem;
+    box-shadow: none;
   }
 
   .list-pane {
@@ -778,6 +824,7 @@ button { font-family: inherit; }
   }
 
   .sheet-body {
+    position: relative;   /* 絞り込み欄の位置（シートの段階の高さ）をここから測る */
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -790,6 +837,59 @@ button { font-family: inherit; }
     position: static;
     padding-top: 2px;
   }
+}
+
+/* ---------- スマホ幅：シートを広く使うため、検索欄は地図の上に重ね、
+              絞り込みはジャンル・エリアのプルダウンを横に並べるだけにする ---------- */
+
+@media (max-width: 599px) {
+  #landmarkRow { display: none !important; }
+
+  .genre-chips,
+  .segmented { display: none; }
+
+  .genre-select,
+  .area-select {
+    display: block;
+    max-width: none;
+  }
+
+  .filters {
+    display: flex;
+    gap: 8px;
+    padding: 2px 0 12px;
+  }
+
+  .filter-row {
+    display: block;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  .filter-label { display: none; }   /* プルダウンの中に「すべてのジャンル」などと出るので見出しは不要 */
+
+  /* 検索欄：地図の上部（ズームボタンの右）に重ねる */
+  .map-pane .search-row {
+    position: absolute;
+    top: 10px;
+    left: 54px;
+    right: 10px;
+    z-index: 650;
+  }
+
+  /* 枠線は下のプルダウンと同じ色。影を付けて地図の上に浮いて見えるようにする */
+  .map-pane .search-input {
+    padding: 10px 14px;
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 6px 16px rgba(16, 38, 64, .22), 0 1px 3px rgba(16, 38, 64, .14);
+  }
+
+  /* 地図の出典表示は、検索欄の下へ */
+  .leaflet-top.leaflet-right { top: 54px; }
+
+  /* 狭い地図に収まるよう、ポップアップの画像を小さめに */
+  .popup-img { height: 80px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
