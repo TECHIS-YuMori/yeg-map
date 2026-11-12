@@ -7,7 +7,7 @@
             │  ② 新しい回答を取り込む（メールアドレスは取り込まない）
             ▼
      [MAP掲載]           サイト用のシート。運営が表記を整えて「掲載」にチェック
-            │  ③ MAPに反映（位置・エリア・写真の公開設定、公開データの作成）
+            │  ③ MAPに反映（位置・写真の公開設定、公開データの作成）
             ▼
      doGet() がMAP掲載シートの掲載分だけをJSONで返す → サイト
 
@@ -53,7 +53,7 @@ const CONFIG = {
     // ---- 以下は補助列 ----
     publish:     '掲載',
     category:    '業態',        // ジャンルの絞り込みに使う
-    area:        'エリア',
+    area:        'エリア',      // 運営が手で入力（例：中心地）。空欄ならエリアなし
     lat:         '緯度',
     lng:         '経度',
     memo:        '確認メモ',
@@ -136,7 +136,7 @@ function toPublicShop(disp, mc, lat, lng) {
     name:     name,
     member:   cell(disp, mc.owner),
     category: cell(disp, mc.category),
-    area:     cell(disp, mc.area) || extractArea(address),
+    area:     cell(disp, mc.area),
     address:  address,
     tel:      cell(disp, mc.tel),
     hours:    cell(disp, mc.hours),
@@ -281,7 +281,6 @@ function importResponses() {
     out[mc.capacity]    = cell(disp, fc.capacity).normalize('NFKC');
     out[mc.publish]     = false;
     out[mc.category]    = cell(disp, fc.category);
-    out[mc.area]        = extractArea(address);
     out[mc.respondedAt] = new Date(ts);
 
     if (!hours && rawHours) {
@@ -356,7 +355,7 @@ function lastDataRow(values, mc) {
   return 1;
 }
 
-/* ③ 位置・エリアの補完と写真の公開設定を行い、公開データを作り直す */
+/* ③ 位置の補完と写真の公開設定を行い、公開データを作り直す */
 function publishMap() {
   const ui = SpreadsheetApp.getUi();
   const map = readSheet(CONFIG.MAP_SHEET);
@@ -368,13 +367,12 @@ function publishMap() {
 
   const geocoder = newGeocoder();
   const count = { located: 0, shared: 0, imageError: 0, noLocation: 0, badHours: 0 };
-  const out = { lat: [], lng: [], area: [], memo: [] };
+  const out = { lat: [], lng: [], memo: [] };
 
   map.values.forEach((row, i) => {
     const disp = map.display[i];
     let lat = row[mc.lat];
     let lng = row[mc.lng];
-    let area = row[mc.area];
     const notes = [];
     const address = cell(disp, mc.address);
 
@@ -389,7 +387,6 @@ function publishMap() {
       if (r.note) notes.push(r.note);
     }
 
-    if (!area && address) area = extractArea(address);
 
     if (isChecked(row[mc.publish])) {
       // 掲載するお店の写真だけを「リンクを知っている全員が閲覧可」にする
@@ -416,14 +413,12 @@ function publishMap() {
 
     out.lat.push([lat]);
     out.lng.push([lng]);
-    out.area.push([area]);
     out.memo.push([mergeMemo(row[mc.memo], notes)]);
   });
 
   if (map.values.length) {
     writeColumn(map.sheet, mc.lat, out.lat);
     writeColumn(map.sheet, mc.lng, out.lng);
-    writeColumn(map.sheet, mc.area, out.area);
     writeColumn(map.sheet, mc.memo, out.memo);
 
     // 手で追加した行にもチェックボックスを付ける（お店が入っている行まで）
@@ -678,14 +673,6 @@ function pad2(n) {
   return String(n).padStart(2, '0');
 }
 
-/* 住所から町名を取り出す（例：松山市二番町2丁目 → 二番町） */
-function extractArea(address) {
-  const a = String(address).normalize('NFKC');
-  if (a.includes('大街道')) return '大街道';
-  if (a.includes('銀天街')) return '銀天街';
-  const m = a.match(/松山市\s*(.+?町)/);
-  return m ? m[1] : '';
-}
 
 function normalizeName(name) {
   return String(name).normalize('NFKC').replace(/\s+/g, '').toLowerCase();

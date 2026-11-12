@@ -2,9 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>松山YEG 夜の飲食店MAP</title>
-<meta name="description" content="松山YEG会員が経営する夜の飲食店を地図から探せる、飲み歩きマップです。">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a3e6a">
+<title>松山YEG飲食店MAP</title>
+<meta name="description" content="松山YEG会員が経営する飲食店を地図から探せる、飲み食べ歩きマップです。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Noto+Serif+JP:wght@600&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
       integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb"
       crossorigin="anonymous" referrerpolicy="no-referrer">
@@ -15,10 +19,10 @@
 <header class="site-header">
   <div class="header-inner">
     <div class="brand">
-      <span class="brand-mark">松山YEG</span>
-      <h1 class="brand-title">夜の飲食店MAP</h1>
+      <!-- <span class="brand-mark">松山YEG</span> -->
+      <h1 class="brand-title">松山YEG 飲食店MAP</h1>
     </div>
-    <p class="brand-lead">松山YEG会員が営む、夜のお店を地図から探せる飲み歩きマップ</p>
+    <p class="brand-lead">松山YEG会員が営むお店を堪能ください！</p>
   </div>
 </header>
 
@@ -30,36 +34,66 @@
     <button type="button" id="resetView" class="map-reset" title="地図表示をリセット">全体表示に戻す</button>
   </div>
 
-  <!-- 一覧 -->
-  <div class="list-pane">
+  <!-- 一覧（スマホでは下から引き出すシートになる） -->
+  <div class="list-pane" id="sheet">
 
-    <div class="filters">
-      <div class="search-row">
-        <input type="search" id="keyword" class="search-input"
-               placeholder="店名・エリア・キーワードで検索" aria-label="キーワード検索">
-      </div>
-      <div class="chip-row" id="categoryChips" role="group" aria-label="ジャンルで絞り込み"></div>
-      <div class="chip-row" id="areaChips" role="group" aria-label="エリアで絞り込み"></div>
+    <div class="sheet-head" id="sheetHead">
+      <div class="sheet-handle" aria-hidden="true"></div>
       <p class="result-count" id="resultCount" aria-live="polite"></p>
     </div>
 
-    <ul class="shop-list" id="shopList"></ul>
+    <div class="sheet-body" id="sheetBody">
 
-    <p class="empty-state" id="emptyState" hidden>
-      条件に合うお店が見つかりませんでした。<br>検索条件を変えてお試しください。
-    </p>
+      <div class="filters">
+        <div class="search-row">
+          <input type="search" id="keyword" class="search-input"
+                 placeholder="店名・エリア・キーワードで検索" aria-label="キーワード検索">
+        </div>
+
+        <div class="filter-row" id="landmarkRow" hidden>
+          <span class="filter-label">目印</span>
+          <div class="chip-wrap" id="landmarkChips" role="group" aria-label="目印の場所へ移動"></div>
+        </div>
+
+        <div class="filter-row">
+          <span class="filter-label">ジャンル</span>
+          <div class="chip-wrap" id="categoryChips" data-filter-group role="group" aria-label="ジャンルで絞り込み"></div>
+        </div>
+
+        <div class="filter-row" id="areaRow" hidden>
+          <span class="filter-label">エリア</span>
+          <div class="segmented" id="areaChips" data-filter-group role="group" aria-label="エリアで絞り込み"></div>
+        </div>
+      </div>
+
+      <ul class="shop-list" id="shopList"></ul>
+
+      <p class="empty-state" id="emptyState" hidden>
+        条件に合うお店が見つかりませんでした。<br>検索条件を変えてお試しください。
+      </p>
+
+      <footer class="site-footer">
+        <p>松山商工会議所青年部（松山YEG） 会員店舗マップ</p>
+        <p class="footer-note">掲載内容は変更になる場合があります。ご来店前に各店舗へご確認ください。</p>
+      </footer>
+    </div>
   </div>
 
 </div>
 
-<footer class="site-footer">
-  <p>松山商工会議所青年部（松山YEG） 会員店舗マップ</p>
-  <p class="footer-note">掲載内容は変更になる場合があります。ご来店前に各店舗へご確認ください。</p>
-</footer>
+<!-- 画像の拡大表示 -->
+<div class="lightbox" id="lightbox" hidden>
+  <button type="button" class="lightbox-close" id="lightboxClose" aria-label="閉じる">×</button>
+  <figure class="lightbox-figure">
+    <img id="lightboxImg" alt="">
+    <figcaption id="lightboxCaption"></figcaption>
+  </figure>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
         integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="js/landmarks.js"></script>
 <script src="js/data-source.js"></script>
 <script src="js/app.js"></script>
 </body>
