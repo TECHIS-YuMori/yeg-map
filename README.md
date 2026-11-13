@@ -179,8 +179,8 @@ const SOURCE = {
 
 ## 5. インターネットへの公開（GitHub Pages）
 
-- 公開URL：<https://moriyu1988.github.io/yeg-map/>
-- リポジトリ：<https://github.com/MoriYu1988/yeg-map>（`main` ブランチを GitHub Pages で公開）
+- 公開URL：<https://techis-yumori.github.io/yeg-map/>
+- リポジトリ：<https://github.com/TECHIS-YuMori/yeg-map>（`main` ブランチを GitHub Pages で公開）
 
 **お店の情報**の更新は、スプレッドシートで「③ MAPに反映」を押すだけです。GitHubの操作は要りません。
 
