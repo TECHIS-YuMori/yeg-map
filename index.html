@@ -99,12 +99,22 @@
   </figure>
 </div>
 
+<!-- 現在地を許可し直す手順（中身は js/locate.js が端末に合わせて入れる） -->
+<div class="locate-help" id="locateHelp" role="dialog" aria-modal="true" aria-labelledby="locateHelpTitle" hidden>
+  <div class="locate-help-panel">
+    <h2 class="locate-help-title" id="locateHelpTitle">現在地を表示するには</h2>
+    <div class="locate-help-body" id="locateHelpBody"></div>
+    <button type="button" class="locate-help-close js-locate-help-close" id="locateHelpClose">閉じる</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
         integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO"
         crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="js/landmarks.js"></script>
 <script src="js/genre-colors.js"></script>
 <script src="js/data-source.js"></script>
+<script src="js/locate.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

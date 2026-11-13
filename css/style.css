@@ -730,6 +730,116 @@ button { font-family: inherit; }
 
 .lightbox-close:hover { background: rgba(255, 255, 255, .28); }
 
+/* ---------- 現在地 ---------- */
+
+/* ボタン：拡大・縮小ボタンの下。見た目もそろえる */
+.locate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.locate-btn:hover { background: #f4f4f4; }
+.locate-btn.is-active { color: #1a73e8; }
+.locate-btn.is-loading svg { animation: locate-blink 1s ease-in-out infinite; color: #1a73e8; }
+
+@keyframes locate-blink { 50% { opacity: .3; } }
+
+/* 現在地の青い点と、誤差の範囲 */
+.locate-dot {
+  fill: #1a73e8;
+  fill-opacity: 1;
+  stroke: #fff;
+  stroke-width: 3;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .35));
+}
+
+.locate-accuracy {
+  fill: #1a73e8;
+  fill-opacity: .12;
+  stroke: #1a73e8;
+  stroke-opacity: .35;
+  stroke-width: 1;
+}
+
+/* 地図の上の短いお知らせ */
+.map-toast {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  z-index: 900;
+  width: max-content;
+  max-width: calc(100% - 120px);
+  transform: translateX(-50%);
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(24, 34, 46, .9);
+  color: #fff;
+  font-size: .82rem;
+  line-height: 1.5;
+  box-shadow: var(--shadow-lg);
+  pointer-events: none;
+}
+
+/* 許可し直す手順の案内 */
+.locate-help {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 16, 26, .6);
+}
+
+.locate-help-panel {
+  width: min(440px, 100%);
+  max-height: calc(100% - 32px);
+  overflow-y: auto;
+  padding: 20px 20px 16px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.locate-help-title {
+  margin: 0 0 8px;
+  color: var(--brand);
+  font-size: 1.05rem;
+}
+
+.locate-help-body { font-size: .88rem; }
+.locate-help-body p { margin: 0 0 10px; }
+.locate-help-body h3 { margin: 14px 0 4px; font-size: .88rem; }
+.locate-help-body ol { margin: 0; padding-left: 1.4em; }
+.locate-help-body li { margin: 3px 0; }
+.locate-help-note { color: var(--text-muted); font-size: .8rem; }
+
+.locate-help-close {
+  display: block;
+  width: 100%;
+  margin-top: 16px;
+  padding: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.locate-help-close:hover { background: var(--brand-hover); }
+
 /* ---------- スマホ：地図を全画面にし、一覧を下から引き出すシートにする ---------- */
 
 @media (max-width: 899px) {
@@ -887,6 +997,9 @@ button { font-family: inherit; }
 
   /* 地図の出典表示は、検索欄の下へ */
   .leaflet-top.leaflet-right { top: 54px; }
+
+  /* お知らせも検索欄の下へ */
+  .map-toast { top: 62px; max-width: calc(100% - 104px); }   /* 左の現在地ボタンに重ならない幅 */
 
   /* 狭い地図に収まるよう、ポップアップの画像を小さめに */
   .popup-img { height: 80px; }

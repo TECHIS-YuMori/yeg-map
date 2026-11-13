@@ -43,6 +43,7 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   initMap();
+  initLocate();        // 現在地ボタン（js/locate.js）
   placeSearch();
   placeResetButton();
   initSheet();
