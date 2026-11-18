@@ -24,7 +24,8 @@ const state = {
   visible: [],          // 絞り込み後の店舗
   markers: new Map(),   // id -> Leafletマーカー
   activeId: null,
-  filter: { keyword: '', category: '', area: '' }
+  categories: [],       // ジャンルの一覧（データに出てくる順）
+  filter: { keyword: '', categories: [], area: '' }   // categories：選んだジャンル（空ならすべて）
 };
 
 // スマホのシートの状態（mini: 最小 / peek: 少しだけ / half: 半分 / full: 全開）
@@ -304,11 +305,6 @@ function cardHtml(shop, no) {
 
   return `
   <li class="shop-card${shop.id === state.activeId ? ' is-active' : ''}" id="card-${esc(shop.id)}" data-id="${esc(shop.id)}">
-    ${shop.image ? `<div class="card-img-wrap">
-      <img class="card-img js-zoom" src="${esc(shop.image)}" alt="${esc(shop.name)}"
-           loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()">
-      <span class="zoom-hint" aria-hidden="true">拡大表示</span>
-    </div>` : ''}
     <div class="card-head">
       <div class="card-no" style="--c: ${genreColor(shop.category)}">${no}</div>
       <div class="card-title">
@@ -317,6 +313,12 @@ function cardHtml(shop, no) {
         <p class="card-area">${esc(shop.area)}</p>
       </div>
     </div>
+
+    ${shop.image ? `<div class="card-img-wrap">
+      <img class="card-img js-zoom" src="${esc(shop.image)}" alt="${esc(shop.name)}"
+           loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.remove()">
+      <span class="zoom-hint" aria-hidden="true">拡大表示</span>
+    </div>` : ''}
 
     ${shop.description ? `<p class="card-desc">${esc(shop.description)}</p>` : ''}
 
@@ -366,14 +368,10 @@ function mapAppUrl(place) {
    --------------------------------------------------------- */
 
 function buildFilterChips() {
-  // ジャンル：PC・タブレットは色付きのボタン、スマホはプルダウン（CSSでどちらかを表示）
-  const categories = uniqueValues('category');
-  renderOptions('categoryChips', 'category', categories, 'chip chip-genre',
-    v => ` style="--c: ${genreColor(v)}"`);
-  document.getElementById('categorySelect').innerHTML = [
-    '<option value="">すべてのジャンル</option>',
-    ...categories.map(v => `<option value="${esc(v)}">${esc(v)}</option>`)
-  ].join('');
+  // ジャンル：PC・タブレットはプルダウン＋選んだジャンルのタグ（複数可）、
+  // スマホは1つだけ選ぶプルダウン（CSSでどちらかを表示）
+  state.categories = uniqueValues('category');
+  renderGenreControls();
 
   // エリア：PC・タブレットはスイッチ、スマホはプルダウン。値が1つも無ければ行ごと隠す
   const areas = uniqueValues('area');
@@ -409,7 +407,47 @@ function genreColor(name) {
   return GENRE_PALETTE[hash % GENRE_PALETTE.length];
 }
 
-/* 絞り込みの条件を変えて、ボタン・スイッチ・プルダウンの表示をそろえる */
+/* ジャンルの絞り込み欄を、選んでいるジャンルに合わせて描き直す */
+function renderGenreControls() {
+  const selected = state.filter.categories;
+  const rest = state.categories.filter(v => !selected.includes(v));
+
+  // PC・タブレット：プルダウンには、まだ選んでいないジャンルだけを出す
+  const picker = document.getElementById('genrePicker');
+  const placeholder = rest.length === 0 ? 'すべて選択中'
+    : selected.length ? 'ジャンルを追加' : 'ジャンルを選ぶ';
+  picker.innerHTML = [
+    `<option value="">${placeholder}</option>`,
+    ...rest.map(v => `<option value="${esc(v)}">${esc(v)}</option>`)
+  ].join('');
+  picker.value = '';
+  picker.disabled = rest.length === 0;
+
+  // 選んだジャンルはタグにして右側に並べる（幅が足りなければ次の行へ回り込む）。タグを押すと外れる
+  document.getElementById('genreTags').innerHTML = selected.length
+    ? [
+        ...selected.map(v => `<button type="button" class="genre-tag" data-remove="${esc(v)}" style="--c: ${genreColor(v)}" aria-label="${esc(v)}の絞り込みを外す">${esc(v)}<span class="genre-tag-x" aria-hidden="true">×</span></button>`),
+        selected.length >= 2 ? '<button type="button" class="genre-clear" data-clear>すべて解除</button>' : ''
+      ].join('')
+    : '<span class="genre-hint">すべてのジャンルを表示中</span>';
+
+  // スマホ：1つだけ選ぶプルダウン。PCで複数選んだまま幅が変わったときは「◯ジャンルを選択中」と出す
+  const single = document.getElementById('categorySelect');
+  single.innerHTML = [
+    '<option value="">すべてのジャンル</option>',
+    ...state.categories.map(v => `<option value="${esc(v)}">${esc(v)}</option>`),
+    selected.length >= 2 ? `<option value="__multi" disabled>${selected.length}ジャンルを選択中</option>` : ''
+  ].join('');
+  single.value = selected.length >= 2 ? '__multi' : (selected[0] || '');
+}
+
+function setCategories(list) {
+  state.filter.categories = list.filter(v => state.categories.includes(v));
+  renderGenreControls();
+  applyFilter();
+}
+
+/* 絞り込みの条件を変えて、ボタン・スイッチ・プルダウンの表示をそろえる（エリア） */
 function setFilter(key, value) {
   state.filter[key] = value;
 
@@ -428,7 +466,8 @@ function applyFilter() {
   const kw = state.filter.keyword.toLowerCase();
 
   state.visible = state.shops.filter(shop => {
-    if (state.filter.category && shop.category !== state.filter.category) return false;
+    const cats = state.filter.categories;
+    if (cats.length && !cats.includes(shop.category)) return false;
     if (state.filter.area && shop.area !== state.filter.area) return false;
     if (!kw) return true;
 
@@ -449,7 +488,7 @@ function applyFilter() {
 }
 
 function isFiltered() {
-  return Boolean(state.filter.keyword || state.filter.category || state.filter.area);
+  return Boolean(state.filter.keyword || state.filter.categories.length || state.filter.area);
 }
 
 /* ---------------------------------------------------------
@@ -770,9 +809,21 @@ function bindEvents() {
     });
   });
 
+  // ジャンル（PC・タブレット）：プルダウンで選ぶとタグが増え、タグの「×」で外す
+  document.getElementById('genrePicker').addEventListener('change', e => {
+    if (e.target.value) setCategories([...state.filter.categories, e.target.value]);
+  });
+  document.getElementById('genreTags').addEventListener('click', e => {
+    const tag = e.target.closest('[data-remove]');
+    if (tag) setCategories(state.filter.categories.filter(v => v !== tag.dataset.remove));
+    else if (e.target.closest('[data-clear]')) setCategories([]);
+    else return;
+    document.getElementById('genrePicker').focus();   // キーボード操作で迷子にならないように
+  });
+
   // ジャンル・エリア（スマホのプルダウン）
   document.getElementById('categorySelect').addEventListener('change', e => {
-    setFilter('category', e.target.value);
+    if (e.target.value !== '__multi') setCategories(e.target.value ? [e.target.value] : []);
   });
   document.getElementById('areaSelect').addEventListener('change', e => {
     setFilter('area', e.target.value);

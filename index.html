@@ -59,8 +59,12 @@
         <div class="filter-row">
           <span class="filter-label">ジャンル</span>
           <div class="genre-control">
-            <!-- PC・タブレット：色付きのボタン／スマホ：プルダウン（どちらか一方だけを表示） -->
-            <div class="chip-wrap genre-chips" id="categoryChips" data-filter-group role="group" aria-label="ジャンルで絞り込み"></div>
+            <!-- PC・タブレット：プルダウンで選んだジャンルを右側にタグで並べる（複数選択）
+                 スマホ：1つだけ選ぶプルダウン（どちらか一方だけを表示） -->
+            <div class="genre-multi" id="genreMulti">
+              <select class="genre-picker" id="genrePicker" aria-label="ジャンルを選んで絞り込み（複数選べます）"></select>
+              <div class="genre-tags" id="genreTags"></div>
+            </div>
             <select class="genre-select" id="categorySelect" aria-label="ジャンルで絞り込み"></select>
           </div>
         </div>

@@ -8,6 +8,7 @@
   --brand:        #0a3e6a;
   --brand-hover:  #0d5089;
   --brand-soft:   #e3ecf5;
+  --brand-ink:    #0a2236;   /* ブランドカラーを黒に寄せた色（一覧の店名ブロック） */
 
   /* 面・線・文字 */
   --bg:           #ffffff;
@@ -366,7 +367,7 @@ button { font-family: inherit; }
   background: #fff;
   color: var(--text);
   border: 1px solid var(--line-strong);
-  border-radius: 999px;
+  border-radius: 8px;   /* エリアのスイッチのボタンと同じ */
   padding: 5px 14px;
   font-size: .8rem;
   font-weight: 500;
@@ -383,27 +384,72 @@ button { font-family: inherit; }
   font-weight: 700;
 }
 
-/* ジャンルのボタン：ジャンルごとの色（--c）で塗り分ける。「すべて」はブランドカラーのまま */
-
-.chip-genre[style] {
-  color: var(--c);
-  border-color: color-mix(in srgb, var(--c) 45%, #fff);
-  background: color-mix(in srgb, var(--c) 8%, #fff);
-  font-weight: 700;
+/* ジャンル（PC・タブレット）：左にプルダウン、続けて選んだジャンルのタグ。
+   入りきらないタグは次の行の左端（プルダウンの下）へ回り込む。
+   （一覧の列が狭いPCでも、1行に何個か並ぶように） */
+.genre-multi {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 
-.chip-genre[style]:hover { border-color: var(--c); }
+.genre-tags { display: contents; }   /* タグをプルダウンと同じ並びに流す */
 
-.chip-genre[style].is-on {
+.genre-multi .genre-picker { margin-right: 4px; }
+
+.genre-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 9px 0 13px;
+  border: 0;
+  border-radius: 8px;   /* エリアのスイッチのボタンと同じ */
   background: var(--c);
-  border-color: var(--c);
   color: #fff;
+  font-size: .8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
-/* ジャンル・エリアのプルダウン（スマホだけ表示） */
+.genre-tag-x {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .25);
+  font-size: .8rem;
+  line-height: 1;
+}
+
+.genre-tag:hover .genre-tag-x { background: rgba(255, 255, 255, .45); }
+
+.genre-clear {
+  padding: 4px 2px;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: .76rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.genre-clear:hover { color: var(--brand); }
+
+.genre-hint {
+  font-size: .78rem;
+  color: var(--text-muted);
+}
+
+/* ジャンル・エリアのプルダウン（ジャンルを選ぶプルダウンは常に、ほかはスマホだけ表示） */
 .genre-control,
 .area-control { min-width: 0; }
 
+.genre-picker,
 .genre-select,
 .area-select {
   display: none;
@@ -421,8 +467,23 @@ button { font-family: inherit; }
   -webkit-appearance: none;
 }
 
+.genre-picker:focus,
 .genre-select:focus,
 .area-select:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+
+/* PC・タブレットのジャンルのプルダウンは、ほかのボタンに合わせて小さめの文字にする */
+.genre-picker {
+  display: block;
+  flex: 0 0 auto;
+  width: 170px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+  font-size: .86rem;
+  cursor: pointer;
+}
+
+.genre-picker:disabled { color: var(--text-muted); background-color: var(--bg-subtle); cursor: default; }
 
 /* 目印へ移動するボタン */
 .chip-landmark {
@@ -478,6 +539,7 @@ button { font-family: inherit; }
 
 .shop-card {
   position: relative;
+  overflow: hidden;   /* 店名ブロックの塗りを角丸に沿って切る */
   background: #fff;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -496,7 +558,7 @@ button { font-family: inherit; }
 /* 店舗ロゴ・写真。縦横比がまちまちなので、切り抜かずに枠内へ収める */
 .card-img-wrap {
   position: relative;
-  margin-bottom: 12px;
+  margin-top: 12px;   /* 店名ブロックの下に置く */
 }
 
 .card-img {
@@ -522,20 +584,32 @@ button { font-family: inherit; }
   pointer-events: none;
 }
 
+/* 店名ブロック：ブランドカラーを黒に寄せた色で塗り、一覧でお店の区切りを見つけやすくする */
 .card-head {
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  margin: 0 -14px;          /* カードの左右いっぱいまで塗る */
+  padding: 12px 14px;
+  background: var(--brand-ink);
+  color: #fff;
 }
 
+.card-head:first-child {   /* カードの上端から塗る */
+  margin-top: -14px;
+  padding-top: 14px;
+}
+
+/* 丸付き番号：塗りの色が背景とぶつからないよう白い縁を付ける */
 .card-no {
   flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  margin-top: 2px;
+  width: 28px;
+  height: 28px;
+  margin-top: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border: 2px solid #fff;
   border-radius: 50%;
   background: var(--c, var(--pin));
   color: #fff;
@@ -543,7 +617,7 @@ button { font-family: inherit; }
   font-weight: 700;
 }
 
-.shop-card.is-active .card-no { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c, var(--pin)) 25%, #fff); }
+.shop-card.is-active .card-no { box-shadow: 0 0 0 3px rgba(255, 255, 255, .35); }
 
 .card-title { min-width: 0; }
 
@@ -551,7 +625,7 @@ button { font-family: inherit; }
   margin: 0;
   font-size: .74rem;
   font-weight: 700;
-  color: var(--brand);
+  color: rgba(255, 255, 255, .85);
   letter-spacing: .04em;
 }
 
@@ -560,12 +634,21 @@ button { font-family: inherit; }
   font-size: 1.06rem;
   font-weight: 700;
   line-height: 1.45;
+  color: #fff;
 }
 
 .card-area {
   margin: 2px 0 0;
   font-size: .78rem;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, .72);
+}
+
+/* 店名ブロックや画像の直下は、それが区切りになるので点線を消す */
+.card-head + .card-info,
+.card-img-wrap + .card-info {
+  margin-top: 12px;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .card-area:empty { display: none; }
@@ -955,7 +1038,7 @@ button { font-family: inherit; }
 @media (max-width: 599px) {
   #landmarkRow { display: none !important; }
 
-  .genre-chips,
+  .genre-multi,
   .segmented { display: none; }
 
   .genre-select,
