@@ -637,12 +637,6 @@ button { font-family: inherit; }
   color: #fff;
 }
 
-.card-area {
-  margin: 2px 0 0;
-  font-size: .78rem;
-  color: rgba(255, 255, 255, .72);
-}
-
 /* 店名ブロックや画像の直下は、それが区切りになるので点線を消す */
 .card-head + .card-info,
 .card-img-wrap + .card-info {
@@ -650,8 +644,6 @@ button { font-family: inherit; }
   padding-top: 0;
   border-top: 0;
 }
-
-.card-area:empty { display: none; }
 
 .card-desc {
   margin: 10px 0 0;

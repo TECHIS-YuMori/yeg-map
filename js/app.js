@@ -308,9 +308,8 @@ function cardHtml(shop, no) {
     <div class="card-head">
       <div class="card-no" style="--c: ${genreColor(shop.category)}">${no}</div>
       <div class="card-title">
-        <p class="card-cat">${esc(shop.category)}</p>
+        <p class="card-cat">${[shop.category, shop.area].filter(Boolean).map(esc).join(' / ')}</p>
         <h2 class="card-name">${esc(shop.name)}</h2>
-        <p class="card-area">${esc(shop.area)}</p>
       </div>
     </div>
 
